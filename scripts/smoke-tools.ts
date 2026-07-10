@@ -11,6 +11,7 @@ import {
   createOrder,
   cancelOrder,
   orderStatus,
+  escalateToOwner,
 } from "../src/lib/agent/tools";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -112,9 +113,46 @@ async function main() {
       .order("id");
     if (eventsError) throw eventsError;
     assert(
-      events.map((e) => e.type).join(",") === "created,cancelled",
-      `audit trail is created,cancelled — got ${events.map((e) => e.type).join(",")}`,
+      events.map((e) => e.type).join(",") === "created,owner_pinged,cancelled",
+      `audit trail is created,owner_pinged,cancelled — got ${events.map((e) => e.type).join(",")}`,
     );
+
+    const escalated = await escalateToOwner({
+      businessId: business.id,
+      summary: "customer wants a gluten-free dosa",
+      orderId: order.orderId,
+    });
+    assert(escalated.escalated, "escalate_to_owner succeeds with an order");
+
+    await escalateToOwner({
+      businessId: business.id,
+      summary: "caller asked about catering",
+    });
+    const { data: escalations, error: escError } = await db
+      .from("order_events")
+      .select("order_id, business_id")
+      .eq("business_id", business.id)
+      .eq("type", "escalated")
+      .order("id");
+    if (escError) throw escError;
+    assert(escalations.length === 2, "both escalations recorded");
+    assert(
+      escalations[0].order_id === order.orderId,
+      "order escalation is order-scoped",
+    );
+    assert(
+      escalations[1].order_id === null,
+      "business escalation has no order",
+    );
+
+    const rejectedEscalate = await escalateToOwner({
+      businessId: "00000000-0000-0000-0000-000000000000",
+      summary: "nope",
+    }).then(
+      () => false,
+      () => true,
+    );
+    assert(rejectedEscalate, "escalating an unknown business is rejected");
 
     console.log("SMOKE PASS: all tool-layer checks green");
   } finally {

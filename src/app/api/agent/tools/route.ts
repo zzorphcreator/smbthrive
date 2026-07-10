@@ -11,6 +11,8 @@ import {
   cancelOrderInput,
   orderStatus,
   orderStatusInput,
+  escalateToOwner,
+  escalateToOwnerInput,
 } from "@/lib/agent/tools";
 
 // HTTP surface for the voice bridge (and any other channel service).
@@ -22,6 +24,7 @@ const tools = {
   create_order: { input: createOrderInput, run: createOrder },
   cancel_order: { input: cancelOrderInput, run: cancelOrder },
   order_status: { input: orderStatusInput, run: orderStatus },
+  escalate_to_owner: { input: escalateToOwnerInput, run: escalateToOwner },
 } as const;
 
 const bodySchema = z.object({

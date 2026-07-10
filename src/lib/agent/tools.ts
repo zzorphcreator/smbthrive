@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { pingOwner } from "@/lib/notify";
 
 // Channel-agnostic agent tools. Every conversational front end (xAI voice
 // bridge today, chat later) calls these. Grounding rule: order lines only
@@ -117,6 +118,13 @@ export async function createOrder(input: z.infer<typeof createOrderInput>) {
   });
 
   const totalCents = lines.reduce((sum, l) => sum + l.unit_price_cents * l.qty, 0);
+  await pingOwner(db, {
+    businessId: input.businessId,
+    orderId: order.id,
+    message: `New order: ${lines
+      .map((l) => `${l.qty}× ${l.item_name}`)
+      .join(", ")} — $${(totalCents / 100).toFixed(2)}`,
+  });
   return {
     orderId: order.id,
     placedAt: order.placed_at,
@@ -155,6 +163,54 @@ export async function cancelOrder(input: z.infer<typeof cancelOrderInput>) {
     data: { reason: input.reason ?? null },
   });
   return { orderId: input.orderId, status: "cancelled" };
+}
+
+export const escalateToOwnerInput = z.object({
+  businessId: z.string().uuid(),
+  summary: z.string().min(1),
+  orderId: z.string().uuid().optional(),
+});
+
+// Off-menu request, stuck conversation, upset customer: hand off to the
+// owner instead of improvising. Order-scoped when an order exists,
+// business-scoped otherwise.
+export async function escalateToOwner(
+  input: z.infer<typeof escalateToOwnerInput>,
+) {
+  const db = createAdminClient();
+  const { data: business, error } = await db
+    .from("businesses")
+    .select("id")
+    .eq("id", input.businessId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!business) throw new Error("Business not found");
+
+  if (input.orderId) {
+    const { data: order, error: orderError } = await db
+      .from("orders")
+      .select("id")
+      .eq("id", input.orderId)
+      .eq("business_id", input.businessId)
+      .maybeSingle();
+    if (orderError) throw new Error(orderError.message);
+    if (!order) throw new Error("Order not found for this business");
+  }
+
+  const { error: eventError } = await db.from("order_events").insert({
+    order_id: input.orderId ?? null,
+    business_id: input.businessId,
+    type: "escalated",
+    data: { summary: input.summary },
+  });
+  if (eventError) throw new Error(eventError.message);
+
+  await pingOwner(db, {
+    businessId: input.businessId,
+    orderId: input.orderId,
+    message: `Escalation: ${input.summary}`,
+  });
+  return { escalated: true };
 }
 
 export const orderStatusInput = z.object({
