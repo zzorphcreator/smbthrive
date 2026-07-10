@@ -19,7 +19,10 @@
 
 # production
 /build
+
+# internal docs (kept local, not published)
 CLAUDE.md
+CONTEXT.md
 
 # misc
 .DS_Store

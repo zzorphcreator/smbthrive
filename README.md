@@ -6,7 +6,7 @@ takes orders, plus an intelligence dashboard about its standing, competitors,
 and locality.
 
 The full product spec — decisions, flows, data model, build phases, risks —
-lives in [CONTEXT.md](CONTEXT.md).
+lives in `CONTEXT.md` (kept local, not published).
 
 ## How it works
 
@@ -77,5 +77,4 @@ src/app/api/agent/tools/      # POST endpoint the voice bridge calls
 src/lib/supabase/admin.ts     # server-only Supabase client (secret key)
 supabase/migrations/          # schema; apply with `npx supabase db push`
 scripts/smoke-tools.ts        # end-to-end smoke test
-CONTEXT.md                    # product spec and build phases
 ```
