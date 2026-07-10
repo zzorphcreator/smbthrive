@@ -5,8 +5,6 @@ signs up, uploads its menu, and gets an AI agent that answers its phone and
 takes orders, plus an intelligence dashboard about its standing, competitors,
 and locality.
 
-The full product spec — decisions, flows, data model, build phases, risks —
-lives in `CONTEXT.md` (kept local, not published).
 
 ## How it works
 
@@ -24,8 +22,8 @@ lives in `CONTEXT.md` (kept local, not published).
 
 - **Next.js** (App Router, TypeScript, Tailwind) — owner web app + API routes
 - **Supabase** (managed) — Postgres, auth, realtime
-- **Twilio ⇄ xAI Grok Voice Agent** — telephony bridge (separate service, later phase)
-- **Claude** — menu extraction, intel summarization (later phase)
+- **Twilio ⇄ xAI Grok Voice Agent** — telephony bridge (separate service)
+- **Claude** — menu extraction, intel summarization
 
 ## Setup
 
